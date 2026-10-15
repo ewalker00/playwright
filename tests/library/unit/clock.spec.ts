@@ -1670,6 +1670,18 @@ it.describe('Intl API', () => {
     expect(isFirstOfMonth('America/Toronto')).toBeFalsy();
   });
 
+  it('formats an explicit timestamp of 0 as the epoch', { annotation: { type: 'issue', description: 'https://github.com/microsoft/playwright/issues/43424' } }, async ({ install }) => {
+    const NativeDateTimeFormat = Intl.DateTimeFormat;
+    const options: Intl.DateTimeFormatOptions = { timeZone: 'UTC', dateStyle: 'short', timeStyle: 'medium' };
+    const native = new NativeDateTimeFormat('en-US', options);
+    const now = new Date('2024-02-02T10:37:42Z').getTime();
+    install(now);
+    const formatter = new Intl.DateTimeFormat('en-US', options);
+    expect(formatter.format()).toBe(native.format(now));
+    expect(formatter.format(0)).toBe(native.format(0));
+    expect(formatter.formatToParts(0)).toEqual(native.formatToParts(0));
+  });
+
   it('Executes supportedLocalesOf like normal', async ({ installEx }) => {
     const { originals } = installEx();
     expect(Intl.DateTimeFormat.supportedLocalesOf([])).toEqual(
