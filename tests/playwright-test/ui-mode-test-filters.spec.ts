@@ -135,6 +135,38 @@ test('should filter by status', async ({ runUITest }) => {
 
 });
 
+test('should filter tests that did not run', async ({ runUITest }) => {
+  const { page } = await runUITest(basicTestTree);
+
+  await page.getByText('Status:').click();
+  await page.getByLabel('not run').setChecked(true);
+  await expect(page.getByText('Status: not run')).toBeVisible();
+
+  const treeWithoutSelection = async () => (await dumpTestTree(page)()).replaceAll(' <=', '');
+
+  await expect.poll(treeWithoutSelection).toBe(`
+    ▼ ◯ a.test.ts
+        ◯ passes
+        ◯ fails
+      ► ◯ suite
+    ▼ ◯ b.test.ts
+        ◯ passes
+        ◯ fails
+  `);
+
+  await page.getByText('passes').first().hover();
+  await page.getByRole('treeitem', { name: 'passes' }).getByRole('button', { name: 'Run' }).first().click();
+
+  await expect.poll(treeWithoutSelection).toBe(`
+    ▼ ◯ a.test.ts
+        ◯ fails
+      ► ◯ suite
+    ▼ ◯ b.test.ts
+        ◯ passes
+        ◯ fails
+  `);
+});
+
 test('should filter by project', async ({ runUITest }) => {
   const { page } = await runUITest({
     ...basicTestTree,
