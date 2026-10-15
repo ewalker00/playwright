@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import fs from 'fs';
 import { test, expect } from './playwright-test-fixtures';
 
 test('should access error in fixture', async ({ runInlineTest }) => {
@@ -87,6 +88,25 @@ test('should report projectName in result', async ({ runInlineTest }) => {
   expect(report.suites[0].specs[0].tests[0].projectName).toBe('foo');
   expect(report.suites[0].specs[0].tests[1].projectName).toBe('');
   expect(exitCode).toBe(0);
+});
+
+test('should keep each copy when attaching the same path with different content', { annotation: { type: 'issue', description: 'https://github.com/microsoft/playwright/issues/43425' } }, async ({ runInlineTest }) => {
+  const { exitCode, report } = await runInlineTest({
+    'a.spec.ts': `
+      import fs from 'fs';
+      import { test, expect } from '@playwright/test';
+      test('attach', async ({}, testInfo) => {
+        const file = testInfo.outputPath('step.log');
+        for (const step of ['login', 'logout']) {
+          fs.writeFileSync(file, 'log of ' + step);
+          await testInfo.attach('step log', { path: file, contentType: 'text/plain' });
+        }
+      });
+    `
+  });
+  expect(exitCode).toBe(0);
+  const attachments = report.suites[0].specs[0].tests[0].results[0].attachments;
+  expect(attachments.map(a => fs.readFileSync(a.path, 'utf8'))).toEqual(['log of login', 'log of logout']);
 });
 
 test('should access testInfo.attachments in fixture', async ({ runInlineTest }) => {

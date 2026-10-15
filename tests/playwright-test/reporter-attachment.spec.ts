@@ -97,7 +97,7 @@ test(`testInfo.attach errors`, async ({ runInlineTest }) => {
     `,
   }, { reporter: 'line', workers: 1 });
   const text = result.output.replace(/\\/g, '/');
-  expect(text).toMatch(/Error: ENOENT: no such file or directory, copyfile '.*foo.txt.*'/);
+  expect(text).toMatch(/Error: ENOENT: no such file or directory, open '.*foo.txt.*'/);
   expect(text).toContain(`Exactly one of "path" and "body" must be specified`);
   expect(result.passed).toBe(1);
   expect(result.failed).toBe(2);
@@ -113,7 +113,7 @@ test(`testInfo.attach errors with empty path`, async ({ runInlineTest }) => {
       });
     `,
   }, { reporter: 'line', workers: 1 });
-  expect(result.output).toMatch(/Error: ENOENT: no such file or directory, copyfile ''/);
+  expect(result.output).toMatch(/Error: ENOENT: no such file or directory, open ''/);
   expect(result.exitCode).toBe(1);
 });
 
@@ -132,7 +132,7 @@ test(`testInfo.attach error in fixture`, async ({ runInlineTest }) => {
     `,
   }, { reporter: 'line', workers: 1 });
   const text = result.output.replace(/\\/g, '/');
-  expect(text).toMatch(/Error: ENOENT: no such file or directory, copyfile '.*foo.txt.*'/);
+  expect(text).toMatch(/Error: ENOENT: no such file or directory, open '.*foo.txt.*'/);
   expect(result.exitCode).toBe(1);
   expect(result.passed).toBe(0);
   expect(result.failed).toBe(1);
