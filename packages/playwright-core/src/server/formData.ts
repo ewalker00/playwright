@@ -38,7 +38,7 @@ export class MultipartFormData {
 
   addFileField(name: string, value: NonNullable<channels.FormField['file']>) {
     this._beginMultiPartHeader(name);
-    this._chunks.push(Buffer.from(`; filename="${value.name}"`));
+    this._chunks.push(Buffer.from(`; filename="${escapeName(value.name)}"`));
     this._chunks.push(Buffer.from(`\r\ncontent-type: ${value.mimeType || mime.getType(value.name) || 'application/octet-stream'}`));
     this._finishMultiPartHeader();
     this._chunks.push(value.buffer);
@@ -52,7 +52,7 @@ export class MultipartFormData {
 
   private _beginMultiPartHeader(name: string) {
     this._addBoundary();
-    this._chunks.push(Buffer.from(`content-disposition: form-data; name="${name}"`));
+    this._chunks.push(Buffer.from(`content-disposition: form-data; name="${escapeName(name)}"`));
   }
 
   private _finishMultiPartHeader() {
@@ -83,6 +83,12 @@ const alphaNumericEncodingMap = [
 ];
 
 // See generateUniqueBoundaryString() in WebKit
+// Escapes a field or file name the way browsers do, see
+// https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#multipart-form-data.
+function escapeName(name: string): string {
+  return name.replace(/\r/g, '%0D').replace(/\n/g, '%0A').replace(/"/g, '%22');
+}
+
 function generateUniqueBoundaryString(): string {
   const charCodes = [];
   for (let i = 0; i < 16; i++)
