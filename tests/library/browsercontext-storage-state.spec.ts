@@ -708,6 +708,61 @@ for (const restore of ['newContext', 'setStorageState'] as const) {
   });
 }
 
+it('should roundtrip falsy IndexedDB values and keys', { annotation: { type: 'issue', description: 'https://github.com/microsoft/playwright/issues/43418' } }, async ({ page, server, contextFactory }) => {
+  await page.goto(server.EMPTY_PAGE);
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open('falsy', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('store');
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const transaction = db.transaction('store', 'readwrite');
+      const store = transaction.objectStore('store');
+      store.put(0, 'zero');
+      store.put(false, 'false');
+      store.put('', 'empty');
+      store.put(null, 'null');
+      store.put(Infinity, 'infinity');
+      store.put('first', 0);
+      store.put('second', '');
+      transaction.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      transaction.onerror = () => reject(transaction.error);
+    };
+  }));
+
+  const storageState = await page.context().storageState({ indexedDB: true });
+  const context = await contextFactory({ storageState });
+  const restoredPage = await context.newPage();
+  await restoredPage.goto(server.EMPTY_PAGE);
+  const entries = await restoredPage.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('falsy', 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+    });
+    const transaction = db.transaction('store', 'readonly');
+    const store = transaction.objectStore('store');
+    transaction.oncomplete = () => db.close();
+    const [keys, values] = await Promise.all([store.getAllKeys(), store.getAll()].map(request => new Promise<any[]>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    })));
+    return keys.map((key, i) => [key, values[i]]);
+  });
+  expect(entries).toEqual([
+    [0, 'first'],
+    ['', 'second'],
+    ['empty', ''],
+    ['false', false],
+    ['infinity', Infinity],
+    ['null', null],
+    ['zero', 0],
+  ]);
+});
+
 it('should support empty indexedDB', { annotation: { type: 'issue', description: 'https://github.com/microsoft/playwright/issues/35760' } }, async ({ page, server, contextFactory }) => {
   await page.goto(server.EMPTY_PAGE);
   await page.evaluate(() => new Promise<void>(resolve => {
